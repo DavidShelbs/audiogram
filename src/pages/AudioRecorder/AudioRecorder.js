@@ -20,7 +20,7 @@ export const AudioRecorder = () => {
         const checkSupport = () => {
             const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
             const hasMediaRecorder = !!window.MediaRecorder;
-            const isSecure = location.protocol === 'https:' || location.hostname === 'localhost';
+            const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
 
             if (!hasGetUserMedia || !hasMediaRecorder || !isSecure) {
                 setIsSupported(false);
@@ -43,7 +43,7 @@ export const AudioRecorder = () => {
             }
 
             // Check if we're on HTTPS (required for Safari)
-            if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
                 alert('Audio recording requires a secure connection (HTTPS). Please access this page via HTTPS.');
                 return;
             }
