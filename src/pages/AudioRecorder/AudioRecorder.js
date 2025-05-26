@@ -1,4 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import {analytics, functions, firestore, storage} from '../../Firebase'
 
 export const AudioRecorder = () => {
     const [isRecording, setIsRecording] = useState(false);
@@ -9,6 +13,8 @@ export const AudioRecorder = () => {
     const [message, setMessage] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);
     const [isSupported, setIsSupported] = useState(true);
+    const [isUploading, setIsUploading] = useState(false);
+    const [eventId, setEventId] = useState('');
 
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
@@ -26,6 +32,13 @@ export const AudioRecorder = () => {
                 setIsSupported(false);
             }
         };
+
+        // Get event ID from URL parameters (for QR code access)
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventIdFromUrl = urlParams.get('eventId') || urlParams.get('event');
+        if (eventIdFromUrl) {
+            setEventId(eventIdFromUrl);
+        }
 
         checkSupport();
 
@@ -139,7 +152,7 @@ export const AudioRecorder = () => {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const sendRecording = () => {
+    const sendRecording = async () => {
         if (!senderName.trim()) {
             alert('Please enter your name');
             return;
@@ -148,17 +161,108 @@ export const AudioRecorder = () => {
             alert('Please record a message first');
             return;
         }
+        if (!eventId) {
+            alert('Event ID is missing. Please access this page through the provided QR code or link.');
+            return;
+        }
 
-        // Here you would typically send the audio to your backend
-        setShowSuccess(true);
-        setTimeout(() => {
-            // Reset form
-            setAudioURL('');
-            setSenderName('');
-            setMessage('');
-            setRecordingTime(0);
-            setShowSuccess(false);
-        }, 3000);
+        setIsUploading(true);
+
+        try {
+            // Get the blob directly from mediaRecorder instead of fetching
+            let audioBlob;
+            if (audioChunksRef.current && audioChunksRef.current.length > 0) {
+                // Use the original recorded chunks
+                const mimeType = mediaRecorderRef.current?.mimeType || 'audio/wav';
+                audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+            } else {
+                // Fallback to fetching from URL if chunks aren't available
+                const response = await fetch(audioURL);
+                audioBlob = await response.blob();
+            }
+
+            // Create a unique filename
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const cleanName = senderName.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 20);
+            const filename = `audio-messages/${eventId}/${timestamp}-${cleanName}.${getFileExtension(audioBlob.type)}`;
+
+            // Upload to Firebase Storage with metadata
+            const storageRef = ref(storage, filename);
+            const metadata = {
+                contentType: audioBlob.type,
+                customMetadata: {
+                    'senderName': senderName,
+                    'eventId': eventId,
+                    'recordingDuration': recordingTime.toString()
+                }
+            };
+
+            console.log('Uploading to Firebase Storage...', filename);
+            const uploadResult = await uploadBytes(storageRef, audioBlob, metadata);
+            console.log('Upload successful:', uploadResult);
+
+            const downloadURL = await getDownloadURL(uploadResult.ref);
+            console.log('Download URL obtained:', downloadURL);
+
+            // Save metadata to Firestore
+            const docData = {
+                eventId: eventId,
+                senderName: senderName.trim(),
+                message: message.trim(),
+                audioUrl: downloadURL,
+                fileName: filename,
+                recordingDuration: recordingTime,
+                mimeType: audioBlob.type,
+                fileSize: audioBlob.size,
+                timestamp: serverTimestamp(),
+                createdAt: new Date().toISOString(),
+                userAgent: navigator.userAgent.substring(0, 200) // Truncate for Firestore
+            };
+
+            console.log('Saving to Firestore...', docData);
+            const docRef = await addDoc(collection(firestore, 'audioMessages'), docData);
+            console.log('Firestore save successful:', docRef.id);
+
+            setShowSuccess(true);
+            setTimeout(() => {
+                // Reset form
+                setAudioURL('');
+                setSenderName('');
+                setMessage('');
+                setRecordingTime(0);
+                setShowSuccess(false);
+                setIsUploading(false);
+            }, 3000);
+
+        } catch (error) {
+            console.error('Error uploading audio:', error);
+
+            // More specific error messages
+            if (error.code === 'storage/unauthorized') {
+                alert('Upload failed: Please check Firebase Storage permissions.');
+            } else if (error.code === 'storage/canceled') {
+                alert('Upload was canceled. Please try again.');
+            } else if (error.code === 'storage/unknown') {
+                alert('Upload failed due to network issues. Please check your connection and try again.');
+            } else if (error.message?.includes('CORS')) {
+                alert('Upload failed due to CORS policy. Please contact support.');
+            } else {
+                alert(`Failed to send your message: ${error.message || 'Unknown error'}. Please try again.`);
+            }
+
+            setIsUploading(false);
+        }
+    };
+
+    const getFileExtension = (mimeType) => {
+        const extensions = {
+            'audio/mp4': 'm4a',
+            'audio/webm': 'webm',
+            'audio/wav': 'wav',
+            'audio/mpeg': 'mp3',
+            'audio/ogg': 'ogg'
+        };
+        return extensions[mimeType] || 'audio';
     };
 
     const resetRecording = () => {
@@ -192,6 +296,16 @@ export const AudioRecorder = () => {
                                 Record a special message for this memorable occasion
                             </p>
                         </div>
+
+                        {/* Event ID Display */}
+                        {eventId && (
+                            <div className="text-center text-white mb-3">
+                                <small className="opacity-75">
+                                    <i className="bi bi-calendar-event me-1"></i>
+                                    Event: {eventId}
+                                </small>
+                            </div>
+                        )}
 
                         {/* Browser Compatibility Warning */}
                         {!isSupported && (
@@ -339,15 +453,26 @@ export const AudioRecorder = () => {
                                 <button
                                     className="btn btn-primary btn-lg w-100 py-3"
                                     onClick={sendRecording}
-                                    disabled={!audioURL || !senderName.trim()}
+                                    disabled={!audioURL || !senderName.trim() || isUploading}
                                     style={{
                                         borderRadius: '12px',
                                         fontWeight: '600',
                                         fontSize: '1.1rem'
                                     }}
                                 >
-                                    <i className="bi bi-send me-2"></i>
-                                    Send Your Message
+                                    {isUploading ? (
+                                        <>
+                                            <div className="spinner-border spinner-border-sm me-2" role="status">
+                                                <span className="visually-hidden">Loading...</span>
+                                            </div>
+                                            Sending Message...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="bi bi-send me-2"></i>
+                                            Send Your Message
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </div>
