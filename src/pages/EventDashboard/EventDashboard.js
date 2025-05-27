@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import {analytics, functions, firestore, storage} from '../../Firebase'
+import { Waveform } from '../../components'
 
 export const EventDashboard = () => {
     const [messages, setMessages] = useState([]);
@@ -349,11 +350,15 @@ export const EventDashboard = () => {
                                                 <div className="text-center mb-3">
                                                     <button
                                                         className={`btn ${playingId === message.id ? 'btn-danger' : 'btn-primary'} btn-lg rounded-circle`}
-                                                        style={{ width: '60px', height: '60px' }}
+                                                        style={{ width: '100px', height: '100px' }}
                                                         onClick={() => playAudio(message.id)}
                                                     >
                                                         <i className={`fs-1 d-flex align-items-center justify-content-center bi ${playingId === message.id ? 'bi-stop-fill' : 'bi-play-fill'}`}></i>
                                                     </button>
+                                                    <div className="p-4">
+                                                        <h1 className="text-xl font-bold mb-4">Audio Waveform</h1>
+                                                        <Waveform audioUrl={message.audioUrl} />
+                                                    </div>
                                                     <audio
                                                         ref={el => audioRefs.current[message.id] = el}
                                                         src={message.audioUrl}
