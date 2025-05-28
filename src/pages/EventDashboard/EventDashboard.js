@@ -348,25 +348,24 @@ export const EventDashboard = () => {
 
                                                 {/* Audio Player */}
                                                 <div className="text-center mb-3">
-                                                    <button
-                                                        className={`btn ${playingId === message.id ? 'btn-danger' : 'btn-primary'} btn-lg rounded-circle`}
-                                                        style={{ width: '60px', height: '60px' }}
-                                                        onClick={() => playAudio(message.id)}
-                                                    >
-                                                        <i className={`fs-1 d-flex align-items-center justify-content-center bi ${playingId === message.id ? 'bi-stop-fill' : 'bi-play-fill'}`}></i>
-                                                    </button>
-                                                    {/*<div className="p-4">*/}
-                                                    {/*    <h1 className="text-xl font-bold mb-4">Audio Waveform</h1>*/}
-                                                    {/*    <Waveform audioUrl={message.audioUrl} />*/}
-                                                    {/*</div>*/}
-                                                    <audio
-                                                        ref={el => audioRefs.current[message.id] = el}
-                                                        src={message.audioUrl}
-                                                        onEnded={() => setPlayingId(null)}
-                                                        onPause={() => setPlayingId(null)}
-                                                        style={{ display: 'none' }}
-                                                        preload="none"
-                                                    />
+                                                    {/*<button*/}
+                                                    {/*    className={`btn ${playingId === message.id ? 'btn-danger' : 'btn-primary'} btn-lg rounded-circle`}*/}
+                                                    {/*    style={{ width: '60px', height: '60px' }}*/}
+                                                    {/*    onClick={() => playAudio(message.id)}*/}
+                                                    {/*>*/}
+                                                    {/*    <i className={`fs-1 d-flex align-items-center justify-content-center bi ${playingId === message.id ? 'bi-stop-fill' : 'bi-play-fill'}`}></i>*/}
+                                                    {/*</button>*/}
+                                                    <div className="p-4">
+                                                        <Waveform audioUrl={message.audioUrl} />
+                                                    </div>
+                                                    {/*<audio*/}
+                                                    {/*    ref={el => audioRefs.current[message.id] = el}*/}
+                                                    {/*    src={message.audioUrl}*/}
+                                                    {/*    onEnded={() => setPlayingId(null)}*/}
+                                                    {/*    onPause={() => setPlayingId(null)}*/}
+                                                    {/*    style={{ display: 'none' }}*/}
+                                                    {/*    preload="none"*/}
+                                                    {/*/>*/}
                                                 </div>
 
                                                 {/* Written Message */}
