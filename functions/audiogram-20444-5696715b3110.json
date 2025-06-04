@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "audiogram-20444",
+  "private_key_id": "5696715b3110dd2f0aa47fff3eeb845dfb13a282",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCwyUrvk42II0Do\n2cTjiLjqZIhhI4Bdw5wKkS/DuQc2Nl3g+mGKSyutpyx7Wq0BqETLRS3qM1/ScJG3\nQoIsgCMj/FCOYnPWm96QNwQSKXLZa8r+E/g2YC9bhj+cX8HUl9npWkFE0b3sAjuT\nLmYqOlQ60GsR5Yj3VtYlxf0iL7JXJwpDt+d5DcqG95SLjl4s1t8MV6ukQ0GYwutx\nM12WlxUqkjrnCyF/3GeYfysy2Zj4ND6lkrjfo9XlBvySHU/aV2Ebv30PW/FJpk5I\nvFWaD1HmixHGnfilvF6UeVsN3A6iaqoR+9nMuMabFsju09diOxNTMHzIh57UKjaj\nrrefBj79AgMBAAECggEAHn97Z/1Ci1vZlNIMv1wU2orhZDClsodOYhxN6yv+bIHQ\njEFllmAFdv3CFL293u1SgOa8Vwzp2PoGiWD16AtrBIhAtW+SoFFfge2bzC5OW+fW\nqyJyzZ6mTNnKG4YBgFV6CGHDpMWySAbSlD+K7HoHkeXmsr2wdUsLwpR3aPBlidcu\nb0uAtH5B5y5IAsP2gFTTxXMObi1YHW/PjWqjWiI6C4NYJbOBGWxQJBW+dlxBmhj8\nIVru+Q17CNOOviAwAjYOEhsp6fkTpnbyGrG+nfZIGbLApMrZMDEd5/fXnubUWbPm\n4c+RfCbpzLW8pRkcpDxBrdG4576pgRHgnlRvvLL8wQKBgQC9eadGQcwKLSVXCsYD\n+gvLJYwkT4MdjBwIIoQyPt7tPv1+AetTTTcHVL0nEFZVoC9dAAEUrJFOsqi8kVqc\nNro45nheCRhLo18sXBimFxUYGdQPqRrjnLKbiG9tcY2A5cew5FypDqI2SVvazJfZ\nEyV9NW//lukkvfNc6NNEqbtqeQKBgQDu2yOavXY6f8Q4URjuo2OBzbu6BenMCqk4\naqqfktOj6xjA20KFfklR8gUSZb7nuQ2SNTx/M49sj9MNMxjgmUmNpPg7qiF3BAF4\nYgX4nAAFW/q/dw2oJRu89ET9cZedzR1poQt8A4CIieUbFWDz0UKlyImtTJ5+cLWF\nigPu1YfXpQKBgEB6S6Au995mqpRKSERGLQk+h8g7fqTpbwidplrq5jXZ/62Hvasl\nVZqbDZtjhd2xmyyMudFtQC2FwsIYvLr4LLr8Qu3NLoVe3R5dYM30gOsoru99Xnci\nde1TqoeV4s+AYkoiDB5DqpPKtwVoJixqxZEsRCa4FjK4qT5uxKZTFEIRAoGAYnzr\nhm+e42oxb4NJA4VNj4VUZdTwXVj8A64/4oJ5T/qtf0Apgr/a3bYsjzRy7jtotCPN\naSnKdtorDSNHm7y5DnW6gWeaWufE722DxsoUXCFcGDyv3ehHMreKBvMisEeWXCqy\ngJU1F5e8Z1l+W6qqj49L7bBNHhe9UW3iR0W2uJ0CgYARRiZP9gK4qXx7e8+menHk\nTd49+1pLAfzaLyfmHOfTx3V/0qBNTspZy4s5Ax69Xpv82dHA7A0BORvDShwjX3bT\nlAG5i9ie+NooKluhLhpHwIAWNxHCkQAbwhaEUD4nygdR+C319zaO4IP4omeSf+tx\nX3+OyPyeyBfQcYGiU4nfCg==\n-----END PRIVATE KEY-----\n",
+  "client_email": "audiogram-20444@appspot.gserviceaccount.com",
+  "client_id": "117567408909909662711",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/audiogram-20444%40appspot.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
