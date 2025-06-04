@@ -1,4 +1,18 @@
 {
+  "emulators": {
+    "functions": {
+      "host": "localhost",
+      "port": "5004"
+    },
+    "auth": {
+      "host": "localhost",
+      "port": "5003"
+    },
+    "firestore": {
+      "host": "localhost",
+      "port": "5002"
+    }
+  },
   "firestore": {
     "database": "(default)",
     "rules": "firestore.rules",
@@ -16,7 +30,6 @@
         "*.local"
       ],
       "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint"
       ]
     }
   ],

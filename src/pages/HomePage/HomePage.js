@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import {analytics, functions, firestore, storage, auth} from '../../Firebase'
 
 export const HomePage = () => {
     const [eventId, setEventId] = useState('');
@@ -6,36 +9,95 @@ export const HomePage = () => {
     const [newEventName, setNewEventName] = useState('');
     const [newEventDescription, setNewEventDescription] = useState('');
     const [createdEventUrl, setCreatedEventUrl] = useState('');
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [createLoading, setCreateLoading] = useState(false);
+    const [joinLoading, setJoinLoading] = useState(false);
 
-    const handleJoinEvent = () => {
+    // Firebase setup
+    const createEvent = httpsCallable(functions, 'createEvent');
+    const getEvent = httpsCallable(functions, 'getEvent');
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUser(user);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const handleSignIn = async () => {
+        try {
+            const provider = new GoogleAuthProvider();
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error('Sign in error:', error);
+            alert('Failed to sign in. Please try again.');
+        }
+    };
+
+    const handleSignOut = async () => {
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error('Sign out error:', error);
+        }
+    };
+
+    const handleJoinEvent = async () => {
         if (!eventId.trim()) {
             alert('Please enter an event ID');
             return;
         }
-        // Redirect to audio recorder with event ID
-        const audioRecorderUrl = `/audio-recorder?eventId=${encodeURIComponent(eventId.trim())}`;
-        window.open(audioRecorderUrl, '_blank');
+
+        setJoinLoading(true);
+        try {
+            // Verify event exists and is active
+            const result = await getEvent({ eventId: eventId.trim() });
+
+            if (result.data.success) {
+                const audioRecorderUrl = `/audio-recorder?eventId=${encodeURIComponent(eventId.trim())}`;
+                window.open(audioRecorderUrl, '_blank');
+            }
+        } catch (error) {
+            console.error('Error joining event:', error);
+            alert(error.message || 'Event not found or no longer accepting messages');
+        } finally {
+            setJoinLoading(false);
+        }
     };
 
-    const handleCreateEvent = () => {
+    const handleCreateEvent = async () => {
+        if (!user) {
+            alert('Please sign in to create an event');
+            return;
+        }
+
         if (!newEventName.trim()) {
             alert('Please enter an event name');
             return;
         }
 
-        // Generate a simple event ID (in real app, this would come from your backend)
-        const generatedEventId = newEventName.toLowerCase()
-            .replace(/[^a-z0-9]/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '') + '-' + Date.now().toString().slice(-6);
+        setCreateLoading(true);
+        try {
+            const result = await createEvent({
+                eventName: newEventName.trim(),
+                eventDescription: newEventDescription.trim()
+            });
 
-        const eventUrl = `${window.location.origin}/audio-recorder?eventId=${encodeURIComponent(generatedEventId)}`;
-        setCreatedEventUrl(eventUrl);
-
-        // Reset form
-        setNewEventName('');
-        setNewEventDescription('');
-        setShowCreateEvent(false);
+            if (result.data.success) {
+                setCreatedEventUrl(result.data.eventUrl);
+                setNewEventName('');
+                setNewEventDescription('');
+                setShowCreateEvent(false);
+            }
+        } catch (error) {
+            console.error('Error creating event:', error);
+            alert(error.message || 'Failed to create event. Please try again.');
+        } finally {
+            setCreateLoading(false);
+        }
     };
 
     const copyToClipboard = async (text) => {
@@ -44,7 +106,6 @@ export const HomePage = () => {
             alert('Link copied to clipboard!');
         } catch (err) {
             console.error('Failed to copy: ', err);
-            // Fallback for older browsers
             const textArea = document.createElement('textarea');
             textArea.value = text;
             document.body.appendChild(textArea);
@@ -60,6 +121,22 @@ export const HomePage = () => {
         }
     };
 
+    if (loading) {
+        return (
+            <div className="min-vh-100 d-flex align-items-center justify-content-center"
+                 style={{
+                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                 }}>
+                <div className="text-center text-white">
+                    <div className="spinner-border mb-3" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-vh-100 d-flex align-items-center justify-content-center"
              style={{
@@ -69,6 +146,41 @@ export const HomePage = () => {
             <div className="container-fluid px-3">
                 <div className="row justify-content-center">
                     <div className="col-12 col-sm-10 col-md-8 col-lg-6">
+
+                        {/* Auth Section */}
+                        <div className="text-center mb-4">
+                            {user ? (
+                                <div className="d-flex justify-content-center align-items-center gap-3 text-white">
+                                    <div className="d-flex align-items-center gap-2">
+                                        {user.photoURL && (
+                                            <img
+                                                src={user.photoURL}
+                                                alt="Profile"
+                                                className="rounded-circle"
+                                                style={{ width: '32px', height: '32px' }}
+                                            />
+                                        )}
+                                        <span>Welcome, {user.displayName || user.email}</span>
+                                    </div>
+                                    <button
+                                        className="btn btn-outline-light btn-sm"
+                                        onClick={handleSignOut}
+                                        style={{ borderRadius: '20px' }}
+                                    >
+                                        Sign Out
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    className="btn btn-light btn-sm"
+                                    onClick={handleSignIn}
+                                    style={{ borderRadius: '20px' }}
+                                >
+                                    <i className="bi bi-google me-2"></i>
+                                    Sign In with Google
+                                </button>
+                            )}
+                        </div>
 
                         {/* Header */}
                         <div className="text-center text-white mb-5">
@@ -122,20 +234,33 @@ export const HomePage = () => {
                                                     border: '2px solid #e9ecef',
                                                     borderRadius: '12px'
                                                 }}
-                                                onKeyPress={(e) => e.key === 'Enter' && handleJoinEvent()}
+                                                onKeyPress={(e) => e.key === 'Enter' && !joinLoading && handleJoinEvent()}
+                                                disabled={joinLoading}
                                             />
                                         </div>
 
                                         <button
                                             className="btn btn-primary btn-lg w-100"
                                             onClick={handleJoinEvent}
+                                            disabled={joinLoading}
                                             style={{
                                                 borderRadius: '12px',
                                                 fontWeight: '600'
                                             }}
                                         >
-                                            <i className="bi bi-arrow-right-circle me-2"></i>
-                                            Join Event
+                                            {joinLoading ? (
+                                                <>
+                                                    <span className="spinner-border spinner-border-sm me-2" role="status">
+                                                        <span className="visually-hidden">Loading...</span>
+                                                    </span>
+                                                    Joining...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <i className="bi bi-arrow-right-circle me-2"></i>
+                                                    Join Event
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </div>
@@ -157,14 +282,14 @@ export const HomePage = () => {
 
                                         <button
                                             className="btn btn-success btn-lg w-100"
-                                            onClick={() => setShowCreateEvent(true)}
+                                            onClick={() => user ? setShowCreateEvent(true) : handleSignIn()}
                                             style={{
                                                 borderRadius: '12px',
                                                 fontWeight: '600'
                                             }}
                                         >
-                                            <i className="bi bi-plus-lg me-2"></i>
-                                            Create Event
+                                            <i className={`bi ${user ? 'bi-plus-lg' : 'bi-google'} me-2`}></i>
+                                            {user ? 'Create Event' : 'Sign In to Create'}
                                         </button>
                                     </div>
                                 </div>
@@ -240,6 +365,7 @@ export const HomePage = () => {
                                     type="button"
                                     className="btn-close"
                                     onClick={() => setShowCreateEvent(false)}
+                                    disabled={createLoading}
                                 ></button>
                             </div>
                             <div className="modal-body">
@@ -257,7 +383,12 @@ export const HomePage = () => {
                                             border: '2px solid #e9ecef',
                                             borderRadius: '12px'
                                         }}
+                                        maxLength={100}
+                                        disabled={createLoading}
                                     />
+                                    <small className="text-muted">
+                                        {newEventName.length}/100 characters
+                                    </small>
                                 </div>
                                 <div className="mb-4">
                                     <label className="form-label fw-semibold">
@@ -273,18 +404,35 @@ export const HomePage = () => {
                                             border: '2px solid #e9ecef',
                                             borderRadius: '12px'
                                         }}
+                                        maxLength={500}
+                                        disabled={createLoading}
                                     ></textarea>
+                                    <small className="text-muted">
+                                        {newEventDescription.length}/500 characters
+                                    </small>
                                 </div>
                                 <button
                                     className="btn btn-success btn-lg w-100"
                                     onClick={handleCreateEvent}
+                                    disabled={createLoading}
                                     style={{
                                         borderRadius: '12px',
                                         fontWeight: '600'
                                     }}
                                 >
-                                    <i className="bi bi-check-lg me-2"></i>
-                                    Create Event
+                                    {createLoading ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status">
+                                                <span className="visually-hidden">Loading...</span>
+                                            </span>
+                                            Creating Event...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="bi bi-check-lg me-2"></i>
+                                            Create Event
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </div>
@@ -358,31 +506,6 @@ export const HomePage = () => {
                     </div>
                 </div>
             )}
-
-            <style jsx>{`
-                .btn:focus {
-                    box-shadow: none !important;
-                }
-                
-                .form-control:focus {
-                    border-color: #667eea !important;
-                    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
-                }
-                
-                .card {
-                    transition: transform 0.2s ease-in-out;
-                }
-                
-                .card:hover {
-                    transform: translateY(-5px);
-                }
-                
-                @media (max-width: 576px) {
-                    .display-4 {
-                        font-size: 2.5rem !important;
-                    }
-                }
-            `}</style>
         </div>
     );
-};
+}

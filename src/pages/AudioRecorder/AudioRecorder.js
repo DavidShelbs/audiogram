@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import {analytics, functions, firestore, storage} from '../../Firebase'
+import {analytics, functions, firestore, storage, auth} from '../../Firebase'
+import {onAuthStateChanged} from "firebase/auth";
 
 export const AudioRecorder = () => {
     const [isRecording, setIsRecording] = useState(false);
@@ -20,6 +21,17 @@ export const AudioRecorder = () => {
     const audioChunksRef = useRef([]);
     const timerRef = useRef(null);
     const audioRef = useRef(null);
+
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUser(user);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         // Check browser compatibility
@@ -270,6 +282,80 @@ export const AudioRecorder = () => {
         setRecordingTime(0);
         setIsPlaying(false);
     };
+
+    // If no event ID, show error message
+    if (!eventId) {
+        return (
+            <div className="min-vh-100 d-flex align-items-center justify-content-center"
+                 style={{
+                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                 }}>
+                <div className="container-fluid px-3">
+                    <div className="row justify-content-center">
+                        <div className="col-12 col-sm-8 col-md-6 col-lg-4">
+                            <div className="text-center text-white mb-4">
+                                <i className="bi bi-exclamation-triangle-fill display-1 mb-4"
+                                   style={{ color: '#ffd700' }}></i>
+                                <h1 className="display-5 fw-bold mb-3"
+                                    style={{
+                                        background: 'linear-gradient(45deg, #fff, #f0f0ff)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text'
+                                    }}>
+                                    Missing Event Access
+                                </h1>
+                                <p className="lead opacity-75 mb-4">
+                                    You need a valid event link or QR code to access this audio recorder.
+                                </p>
+                            </div>
+
+                            <div className="card shadow-lg border-0 mb-4"
+                                 style={{
+                                     background: 'rgba(255, 255, 255, 0.95)',
+                                     backdropFilter: 'blur(10px)'
+                                 }}>
+                                <div className="card-body p-4 text-center">
+                                    <h5 className="card-title mb-3">
+                                        <i className="bi bi-info-circle me-2"></i>
+                                        How to Access
+                                    </h5>
+                                    <div className="text-start">
+                                        <p className="mb-2">
+                                            <i className="bi bi-qr-code me-2 text-primary"></i>
+                                            Scan the event QR code, or
+                                        </p>
+                                        <p className="mb-2">
+                                            <i className="bi bi-link-45deg me-2 text-primary"></i>
+                                            Use the direct link provided by the event organizer
+                                        </p>
+                                        <p className="mb-0">
+                                            <i className="bi bi-envelope me-2 text-primary"></i>
+                                            Check your event invitation for the correct link
+                                        </p>
+                                    </div>
+                                    <hr className="my-4" />
+                                    <p className="text-muted mb-0">
+                                        <small>
+                                            If you believe this is an error, please contact the event organizer for assistance.
+                                        </small>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="text-center text-white-50">
+                                <small>
+                                    <i className="bi bi-heart-fill me-1"></i>
+                                    We can't wait to hear your message
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-vh-100 d-flex align-items-center justify-content-center"
