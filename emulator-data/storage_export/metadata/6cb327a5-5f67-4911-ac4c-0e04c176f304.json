@@ -1,0 +1,23 @@
+{
+  "name": "audio-messages/test-event-885636/2025-06-05T00-50-45-257Z-test.webm",
+  "bucket": "audiogram-20444.firebasestorage.app",
+  "metageneration": 1,
+  "generation": 1749084645274,
+  "contentType": "audio/webm",
+  "storageClass": "STANDARD",
+  "contentDisposition": "inline",
+  "downloadTokens": [
+    "f1cecbd2-42ba-4c8a-932c-40610a7584a5"
+  ],
+  "etag": "HPdAf15EABpHJJ28fH3yhl6dZlE",
+  "customMetadata": {
+    "senderName": "test",
+    "eventId": "test-event-885636",
+    "recordingDuration": "2"
+  },
+  "timeCreated": "2025-06-05T00:50:45.275Z",
+  "updated": "2025-06-05T00:50:45.275Z",
+  "size": 27963,
+  "md5Hash": "3G6mdmKQ+FOGnxDSoR0+Fw==",
+  "crc32c": "1013750972"
+}

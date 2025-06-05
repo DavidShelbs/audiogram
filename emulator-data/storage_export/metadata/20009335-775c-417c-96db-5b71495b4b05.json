@@ -1,0 +1,23 @@
+{
+  "name": "audio-messages/test-event-885636/2025-06-05T00-46-08-489Z-dstes.webm",
+  "bucket": "audiogram-20444.firebasestorage.app",
+  "metageneration": 1,
+  "generation": 1749084368506,
+  "contentType": "audio/webm",
+  "storageClass": "STANDARD",
+  "contentDisposition": "inline",
+  "downloadTokens": [
+    "3edbc0be-e662-4552-af77-2159dad09c5a"
+  ],
+  "etag": "0WVQ5yDAWIaT2Z/1x4Y5Lq4uuMA",
+  "customMetadata": {
+    "senderName": "dstes",
+    "eventId": "test-event-885636",
+    "recordingDuration": "3"
+  },
+  "timeCreated": "2025-06-05T00:46:08.506Z",
+  "updated": "2025-06-05T00:46:08.506Z",
+  "size": 31783,
+  "md5Hash": "yutMj/wsOCAZZ3EcqD3KpA==",
+  "crc32c": "347933096"
+}

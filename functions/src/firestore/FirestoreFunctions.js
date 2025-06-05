@@ -5,10 +5,13 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { getAuth } = require("firebase-admin/auth");
 const serviceAccount = require("../../audiogram-20444-5696715b3110.json");
 const admin = require('firebase-admin');
+const logger = require('firebase-functions/logger');
+const { onDocumentCreated, onDocumentDeleted } = require('firebase-functions/v2/firestore');
 
 // Initialize admin if not already initialized
 if (!admin.apps.length) {
-    initializeApp({ credential: cert(serviceAccount) });
+    // initializeApp({ credential: cert(serviceAccount) });
+    initializeApp();
 }
 
 const db = getFirestore();
@@ -96,14 +99,22 @@ exports.getEvent = onCall({ cors: true }, async (request) => {
         const eventDoc = await db.collection('events').doc(eventId).get();
 
         if (!eventDoc.exists) {
-            throw new Error("Event not found");
+            // Return public event data (excluding sensitive info)
+            return {
+                success: true,
+                event: null
+            };
         }
 
         const eventData = eventDoc.data();
 
         // Check if event is active
         if (!eventData.isActive) {
-            throw new Error("This event is no longer accepting messages");
+            // Return public event data (excluding sensitive info)
+            return {
+                success: true,
+                event: null
+            };
         }
 
         // Return public event data (excluding sensitive info)
@@ -126,35 +137,85 @@ exports.getEvent = onCall({ cors: true }, async (request) => {
 });
 
 // Update message count when new audio message is added
-exports.incrementMessageCount = onCall({ cors: true }, async (request) => {
-    try {
-        const { eventId } = request.data;
+exports.incrementMessageCountOnCreate = onDocumentCreated(
+    'audioMessages/{messageId}',
+    async (event) => {
+        try {
+            const snapshot = event.data;
+            if (!snapshot) {
+                logger.warn('No snapshot found in event');
+                return;
+            }
 
-        if (!eventId) {
-            throw new Error("Event ID is required");
+            const messageData = snapshot.data();
+            const eventId = messageData.eventId;
+
+            if (!eventId) {
+                logger.warn('No eventId in message data. Skipping.');
+                return;
+            }
+
+            const eventRef = db.collection('events').doc(eventId);
+            const eventDoc = await eventRef.get();
+
+            if (!eventDoc.exists) {
+                logger.warn(`Event with ID ${eventId} not found`);
+                return;
+            }
+
+            const currentCount = eventDoc.data().messageCount || 0;
+
+            await eventRef.update({
+                messageCount: currentCount + 1,
+                lastMessageAt: new Date().toISOString(),
+            });
+
+        } catch (error) {
+            logger.error('Error incrementing message count:', error);
         }
-
-        // Check if event exists
-        const eventRef = db.collection('events').doc(eventId);
-        const eventDoc = await eventRef.get();
-
-        if (!eventDoc.exists) {
-            throw new Error("Event not found");
-        }
-
-        // Increment message count
-        await eventRef.update({
-            messageCount: (eventDoc.data().messageCount || 0) + 1,
-            lastMessageAt: new Date().toISOString()
-        });
-
-        return { success: true };
-
-    } catch (error) {
-        console.error("Error incrementing message count:", error);
-        throw new Error(error.message || "Failed to update message count");
     }
-});
+);
+
+// Decrement message count when an audio message is deleted
+exports.decrementMessageCountOnDelete = onDocumentDeleted(
+    'audioMessages/{messageId}',
+    async (event) => {
+        try {
+            const snapshot = event.data;
+            if (!snapshot) {
+                logger.warn('No snapshot in delete event');
+                return;
+            }
+
+            const messageData = snapshot.data();
+            const eventId = messageData.eventId;
+
+            if (!eventId) {
+                logger.warn('Deleted audio message has no eventId. Skipping.');
+                return;
+            }
+
+            const eventRef = db.collection('events').doc(eventId);
+            const eventDoc = await eventRef.get();
+
+            if (!eventDoc.exists) {
+                logger.warn(`Event with ID ${eventId} not found. Skipping.`);
+                return;
+            }
+
+            const currentCount = eventDoc.data().messageCount || 0;
+            const newCount = Math.max(currentCount - 1, 0); // prevent negative count
+
+            await eventRef.update({
+                messageCount: newCount,
+                lastMessageAt: new Date().toISOString(),
+            });
+
+        } catch (error) {
+            logger.error('Error decrementing message count:', error);
+        }
+    }
+);
 
 // Get events for authenticated user (for dashboard/management)
 exports.getUserEvents = onCall({ cors: true }, async (request) => {
@@ -188,6 +249,51 @@ exports.getUserEvents = onCall({ cors: true }, async (request) => {
     } catch (error) {
         console.error("Error getting user events:", error);
         throw new Error(error.message || "Failed to get events");
+    }
+});
+
+exports.loadMessagesForEvent = onCall({ cors: true }, async (request) => {
+    try {
+        const uid = request.auth?.uid;
+        const eventId = request.data?.eventId;
+
+        if (!uid) {
+            throw new Error('Unauthorized: user not authenticated');
+        }
+
+        if (!eventId) {
+            throw new Error('Missing eventId');
+        }
+
+        // Verify user owns the event
+        const eventRef = db.collection('events').doc(eventId);
+        const eventDoc = await eventRef.get();
+
+        if (!eventDoc.exists) {
+            throw new Error('Event not found');
+        }
+
+        const eventData = eventDoc.data();
+        if (eventData.createdBy !== uid) {
+            throw new Error('Access denied: not event owner');
+        }
+
+        // Load messages for this event
+        const messagesSnapshot = await db.collection('audioMessages')
+            .where('eventId', '==', eventId)
+            .orderBy('timestamp', 'desc')
+            .get();
+
+        const messages = messagesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        return { success: true, eventName: eventData.eventName, messages };
+
+    } catch (error) {
+        logger.error('Error loading messages for event:', error);
+        throw new Error(error.message || 'Internal error');
     }
 });
 

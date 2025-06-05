@@ -3,11 +3,13 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import {analytics, functions, firestore, storage} from '../../Firebase'
 import { Waveform } from '../../components'
+import { httpsCallable } from 'firebase/functions';
 
 export const EventDashboard = () => {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [eventId, setEventId] = useState('');
+    const [eventName, setEventName] = useState('');
     const [playingId, setPlayingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('newest');
@@ -28,32 +30,25 @@ export const EventDashboard = () => {
         }
     }, []);
 
-    const loadMessages = (eventIdToLoad) => {
+    const loadMessages = async (eventIdToLoad) => {
         if (!eventIdToLoad) return;
 
         setLoading(true);
-        const q = query(
-            collection(firestore, 'audioMessages'),
-            where('eventId', '==', eventIdToLoad),
-            orderBy('timestamp', 'desc')
-        );
+        try {
+            const loadMessagesFn = httpsCallable(functions, 'loadMessagesForEvent');
+            const result = await loadMessagesFn({ eventId: eventIdToLoad });
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const messagesList = [];
-            querySnapshot.forEach((doc) => {
-                messagesList.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
-            setMessages(messagesList);
-            setLoading(false);
-        }, (error) => {
+            if (result.data.success) {
+                setMessages(result.data.messages);
+                setEventName(result.data.eventName);
+            } else {
+                console.warn('Failed to load messages:', result.data);
+            }
+        } catch (error) {
             console.error('Error loading messages:', error);
+        } finally {
             setLoading(false);
-        });
-
-        return unsubscribe;
+        }
     };
 
     const playAudio = (messageId) => {
@@ -239,7 +234,7 @@ export const EventDashboard = () => {
                         }}>
                         Event Messages Dashboard
                     </h1>
-                    <p className="lead opacity-75">Event: {eventId}</p>
+                    <p className="lead opacity-75">Event: {eventName}</p>
                     <div className="badge bg-light text-dark fs-6 px-3 py-2">
                         {messages.length} {messages.length === 1 ? 'Message' : 'Messages'}
                     </div>

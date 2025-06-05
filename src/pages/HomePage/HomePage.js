@@ -56,13 +56,15 @@ export const HomePage = () => {
             // Verify event exists and is active
             const result = await getEvent({ eventId: eventId.trim() });
 
-            if (result.data.success) {
+            if (result.data.success && result.data.event !== null) {
                 const audioRecorderUrl = `/audio-recorder?eventId=${encodeURIComponent(eventId.trim())}`;
                 window.open(audioRecorderUrl, '_blank');
+            } else {
+                alert('Event not found or no longer accepting messages');
             }
         } catch (error) {
             console.error('Error joining event:', error);
-            alert(error.message || 'Event not found or no longer accepting messages');
+            alert(error.message);
         } finally {
             setJoinLoading(false);
         }

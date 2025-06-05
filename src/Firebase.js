@@ -4,8 +4,8 @@ import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 // https://firebase.google.com/docs/emulator-suite/connect_firestore#android_apple_platforms_and_web_sdks
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
-import {getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut} from "firebase/auth";
-import {getStorage} from "firebase/storage";
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, connectAuthEmulator } from "firebase/auth";
+import { getStorage, connectStorageEmulator} from "firebase/storage";
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -29,9 +29,10 @@ if (window.location.hostname === "localhost") {
     console.log(
         "Testing locally: hitting local functions and firestore emulators."
     );
+    connectStorageEmulator(storage, "127.0.0.1", 9199);
     connectFunctionsEmulator(functions, "127.0.0.1", 5004);
-    // connectFirestoreEmulator(firestore, "127.0.0.1", 5002);
-    // connectAuthEmulator(auth, "http://127.0.0.1:5003");
+    connectFirestoreEmulator(firestore, "127.0.0.1", 5002);
+    connectAuthEmulator(auth, "http://127.0.0.1:5003");
 }
 
 export { analytics, functions, firestore, storage, auth };
