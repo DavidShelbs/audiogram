@@ -4,6 +4,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import {analytics, functions, firestore, storage, auth} from '../../Firebase'
 import {onAuthStateChanged} from "firebase/auth";
+import {NavBar, useAuth} from "../../components";
 
 export const AudioRecorder = () => {
     const [isRecording, setIsRecording] = useState(false);
@@ -22,16 +23,7 @@ export const AudioRecorder = () => {
     const timerRef = useRef(null);
     const audioRef = useRef(null);
 
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setUser(user);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
+    const { user, loading } = useAuth();
 
     useEffect(() => {
         // Check browser compatibility
@@ -283,9 +275,106 @@ export const AudioRecorder = () => {
         setIsPlaying(false);
     };
 
+    if (loading) {
+        return (
+            <>
+                <NavBar />
+                <div className="min-vh-100 d-flex align-items-center justify-content-center"
+                     style={{
+                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                         paddingTop: '80px'
+                     }}>
+                    <div className="text-center text-white">
+                        <div className="spinner-border mb-3" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading...</p>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
     // If no event ID, show error message
     if (!eventId) {
         return (
+            <>
+                <NavBar/>
+                <div className="min-vh-100 d-flex align-items-center justify-content-center"
+                     style={{
+                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                     }}>
+                    <div className="container-fluid px-3">
+                        <div className="row justify-content-center">
+                            <div className="col-12 col-sm-8 col-md-6 col-lg-4">
+                                <div className="text-center text-white mb-4">
+                                    <i className="bi bi-exclamation-triangle-fill display-1 mb-4"
+                                       style={{ color: '#ffd700' }}></i>
+                                    <h1 className="display-5 fw-bold mb-3"
+                                        style={{
+                                            background: 'linear-gradient(45deg, #fff, #f0f0ff)',
+                                            WebkitBackgroundClip: 'text',
+                                            WebkitTextFillColor: 'transparent',
+                                            backgroundClip: 'text'
+                                        }}>
+                                        Missing Event Access
+                                    </h1>
+                                    <p className="lead opacity-75 mb-4">
+                                        You need a valid event link or QR code to access this audio recorder.
+                                    </p>
+                                </div>
+
+                                <div className="card shadow-lg border-0 mb-4"
+                                     style={{
+                                         background: 'rgba(255, 255, 255, 0.95)',
+                                         backdropFilter: 'blur(10px)'
+                                     }}>
+                                    <div className="card-body p-4 text-center">
+                                        <h5 className="card-title mb-3">
+                                            <i className="bi bi-info-circle me-2"></i>
+                                            How to Access
+                                        </h5>
+                                        <div className="text-start">
+                                            <p className="mb-2">
+                                                <i className="bi bi-qr-code me-2 text-primary"></i>
+                                                Scan the event QR code, or
+                                            </p>
+                                            <p className="mb-2">
+                                                <i className="bi bi-link-45deg me-2 text-primary"></i>
+                                                Use the direct link provided by the event organizer
+                                            </p>
+                                            <p className="mb-0">
+                                                <i className="bi bi-envelope me-2 text-primary"></i>
+                                                Check your event invitation for the correct link
+                                            </p>
+                                        </div>
+                                        <hr className="my-4" />
+                                        <p className="text-muted mb-0">
+                                            <small>
+                                                If you believe this is an error, please contact the event organizer for assistance.
+                                            </small>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="text-center text-white-50">
+                                    <small>
+                                        <i className="bi bi-heart-fill me-1"></i>
+                                        We can't wait to hear your message
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    return (
+        <>
+            <NavBar />
             <div className="min-vh-100 d-flex align-items-center justify-content-center"
                  style={{
                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -294,9 +383,9 @@ export const AudioRecorder = () => {
                 <div className="container-fluid px-3">
                     <div className="row justify-content-center">
                         <div className="col-12 col-sm-8 col-md-6 col-lg-4">
-                            <div className="text-center text-white mb-4">
-                                <i className="bi bi-exclamation-triangle-fill display-1 mb-4"
-                                   style={{ color: '#ffd700' }}></i>
+
+                            {/* Header */}
+                            <div className="text-center text-white mb-5">
                                 <h1 className="display-5 fw-bold mb-3"
                                     style={{
                                         background: 'linear-gradient(45deg, #fff, #f0f0ff)',
@@ -304,297 +393,226 @@ export const AudioRecorder = () => {
                                         WebkitTextFillColor: 'transparent',
                                         backgroundClip: 'text'
                                     }}>
-                                    Missing Event Access
+                                    Share Your Voice
                                 </h1>
-                                <p className="lead opacity-75 mb-4">
-                                    You need a valid event link or QR code to access this audio recorder.
+                                <p className="lead opacity-75">
+                                    Record a special message for this memorable occasion
                                 </p>
                             </div>
 
+                            {/* Event ID Display */}
+                            {eventId && (
+                                <div className="text-center text-white mb-3">
+                                    <small className="opacity-75">
+                                        <i className="bi bi-calendar-event me-1"></i>
+                                        Event: {eventId}
+                                    </small>
+                                </div>
+                            )}
+
+                            {/* Browser Compatibility Warning */}
+                            {!isSupported && (
+                                <div className="alert alert-warning mb-4" role="alert">
+                                    <h6 className="alert-heading">
+                                        <i className="bi bi-exclamation-triangle me-2"></i>
+                                        Browser Compatibility Notice
+                                    </h6>
+                                    <p className="mb-2">Audio recording requires:</p>
+                                    <ul className="mb-2">
+                                        <li>A secure connection (HTTPS)</li>
+                                        <li>Modern browser (Chrome, Firefox, Safari 14.3+)</li>
+                                        <li>Microphone permissions</li>
+                                    </ul>
+                                    <small>If you're having issues, try accessing this page via HTTPS or use a different browser.</small>
+                                </div>
+                            )}
+
+                            {/* Success Message */}
+                            {showSuccess && (
+                                <div className="alert alert-success text-center mb-4" role="alert">
+                                    <i className="bi bi-check-circle-fill me-2"></i>
+                                    Your message has been sent! Thank you for sharing.
+                                </div>
+                            )}
+
+                            {/* Recording Section */}
                             <div className="card shadow-lg border-0 mb-4"
                                  style={{
                                      background: 'rgba(255, 255, 255, 0.95)',
                                      backdropFilter: 'blur(10px)'
                                  }}>
-                                <div className="card-body p-4 text-center">
-                                    <h5 className="card-title mb-3">
-                                        <i className="bi bi-info-circle me-2"></i>
-                                        How to Access
-                                    </h5>
-                                    <div className="text-start">
-                                        <p className="mb-2">
-                                            <i className="bi bi-qr-code me-2 text-primary"></i>
-                                            Scan the event QR code, or
-                                        </p>
-                                        <p className="mb-2">
-                                            <i className="bi bi-link-45deg me-2 text-primary"></i>
-                                            Use the direct link provided by the event organizer
-                                        </p>
-                                        <p className="mb-0">
-                                            <i className="bi bi-envelope me-2 text-primary"></i>
-                                            Check your event invitation for the correct link
-                                        </p>
+                                <div className="card-body p-4">
+
+                                    {/* Record Button */}
+                                    <div className="text-center mb-4">
+                                        <button
+                                            className={`btn btn-lg rounded-circle d-flex align-items-center justify-content-center mx-auto ${
+                                                isRecording
+                                                    ? 'btn-danger'
+                                                    : audioURL
+                                                        ? 'btn-success'
+                                                        : 'btn-primary'
+                                            }`}
+                                            style={{
+                                                width: '120px',
+                                                height: '120px',
+                                                fontSize: '1.1rem',
+                                                fontWeight: '600',
+                                                boxShadow: isRecording
+                                                    ? '0 0 30px rgba(220, 53, 69, 0.5)'
+                                                    : '0 8px 25px rgba(0, 0, 0, 0.15)',
+                                                animation: isRecording ? 'pulse 1.5s infinite' : 'none'
+                                            }}
+                                            onClick={isRecording ? stopRecording : audioURL ? resetRecording : startRecording}
+                                        >
+                                            <div className="text-center">
+                                                {isRecording ? (
+                                                    <>
+                                                        <i className="bi bi-stop-fill d-block mb-1" style={{ fontSize: '2rem' }}></i>
+                                                        <small>Stop</small>
+                                                    </>
+                                                ) : audioURL ? (
+                                                    <>
+                                                        <i className="bi bi-arrow-clockwise d-block mb-1" style={{ fontSize: '2rem' }}></i>
+                                                        <small>Re-record</small>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <i className="bi bi-mic-fill d-block mb-1" style={{ fontSize: '2rem' }}></i>
+                                                        <small>Record</small>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </button>
+
+                                        {/* Timer */}
+                                        {(isRecording || audioURL) && (
+                                            <div className="mt-3">
+                          <span className="badge bg-secondary fs-6 px-3 py-2">
+                            <i className="bi bi-clock me-1"></i>
+                              {formatTime(recordingTime)}
+                          </span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <hr className="my-4" />
-                                    <p className="text-muted mb-0">
-                                        <small>
-                                            If you believe this is an error, please contact the event organizer for assistance.
-                                        </small>
-                                    </p>
+
+                                    {/* Audio Playback */}
+                                    {audioURL && (
+                                        <div className="text-center mb-4">
+                                            <button
+                                                className="btn btn-outline-primary btn-lg"
+                                                onClick={playAudio}
+                                            >
+                                                <i className={`bi ${isPlaying ? 'bi-pause-fill' : 'bi-play-fill'} me-2`}></i>
+                                                {isPlaying ? 'Pause' : 'Play'} Recording
+                                            </button>
+                                            <audio
+                                                ref={audioRef}
+                                                src={audioURL}
+                                                onEnded={() => setIsPlaying(false)}
+                                                style={{ display: 'none' }}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Form Fields */}
+                                    <div className="mb-3">
+                                        <label htmlFor="senderName" className="form-label fw-semibold">
+                                            <i className="bi bi-person me-2"></i>Your Name *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="form-control form-control-lg"
+                                            id="senderName"
+                                            placeholder="Enter your name"
+                                            value={senderName}
+                                            onChange={(e) => setSenderName(e.target.value)}
+                                            style={{
+                                                border: '2px solid #e9ecef',
+                                                borderRadius: '12px'
+                                            }}
+                                        />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label htmlFor="message" className="form-label fw-semibold">
+                                            <i className="bi bi-chat-heart me-2"></i>Written Message (Optional)
+                                        </label>
+                                        <textarea
+                                            className="form-control"
+                                            id="message"
+                                            rows="3"
+                                            placeholder="Add a written note to go with your recording..."
+                                            value={message}
+                                            onChange={(e) => setMessage(e.target.value)}
+                                            style={{
+                                                border: '2px solid #e9ecef',
+                                                borderRadius: '12px'
+                                            }}
+                                        ></textarea>
+                                    </div>
+
+                                    {/* Send Button */}
+                                    <button
+                                        className="btn btn-primary btn-lg w-100 py-3"
+                                        onClick={sendRecording}
+                                        disabled={!audioURL || !senderName.trim() || isUploading}
+                                        style={{
+                                            borderRadius: '12px',
+                                            fontWeight: '600',
+                                            fontSize: '1.1rem'
+                                        }}
+                                    >
+                                        {isUploading ? (
+                                            <>
+                                                <div className="spinner-border spinner-border-sm me-2" role="status">
+                                                    <span className="visually-hidden">Loading...</span>
+                                                </div>
+                                                Sending Message...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="bi bi-send me-2"></i>
+                                                Send Your Message
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             </div>
 
+                            {/* Footer */}
                             <div className="text-center text-white-50">
                                 <small>
                                     <i className="bi bi-heart-fill me-1"></i>
-                                    We can't wait to hear your message
+                                    Your message will make this day even more special
                                 </small>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <style jsx>{`
+            @keyframes pulse {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.05); }
+            }
+            
+            .btn:focus {
+              box-shadow: none !important;
+            }
+            
+            .form-control:focus {
+              border-color: #667eea !important;
+              box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+            }
+            
+            @media (max-width: 576px) {
+              .display-5 {
+                font-size: 2rem !important;
+              }
+            }
+          `}</style>
             </div>
-        );
-    }
-
-    return (
-        <div className="min-vh-100 d-flex align-items-center justify-content-center"
-             style={{
-                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                 fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-             }}>
-            <div className="container-fluid px-3">
-                <div className="row justify-content-center">
-                    <div className="col-12 col-sm-8 col-md-6 col-lg-4">
-
-                        {/* Header */}
-                        <div className="text-center text-white mb-5">
-                            <h1 className="display-5 fw-bold mb-3"
-                                style={{
-                                    background: 'linear-gradient(45deg, #fff, #f0f0ff)',
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    backgroundClip: 'text'
-                                }}>
-                                Share Your Voice
-                            </h1>
-                            <p className="lead opacity-75">
-                                Record a special message for this memorable occasion
-                            </p>
-                        </div>
-
-                        {/* Event ID Display */}
-                        {eventId && (
-                            <div className="text-center text-white mb-3">
-                                <small className="opacity-75">
-                                    <i className="bi bi-calendar-event me-1"></i>
-                                    Event: {eventId}
-                                </small>
-                            </div>
-                        )}
-
-                        {/* Browser Compatibility Warning */}
-                        {!isSupported && (
-                            <div className="alert alert-warning mb-4" role="alert">
-                                <h6 className="alert-heading">
-                                    <i className="bi bi-exclamation-triangle me-2"></i>
-                                    Browser Compatibility Notice
-                                </h6>
-                                <p className="mb-2">Audio recording requires:</p>
-                                <ul className="mb-2">
-                                    <li>A secure connection (HTTPS)</li>
-                                    <li>Modern browser (Chrome, Firefox, Safari 14.3+)</li>
-                                    <li>Microphone permissions</li>
-                                </ul>
-                                <small>If you're having issues, try accessing this page via HTTPS or use a different browser.</small>
-                            </div>
-                        )}
-
-                        {/* Success Message */}
-                        {showSuccess && (
-                            <div className="alert alert-success text-center mb-4" role="alert">
-                                <i className="bi bi-check-circle-fill me-2"></i>
-                                Your message has been sent! Thank you for sharing.
-                            </div>
-                        )}
-
-                        {/* Recording Section */}
-                        <div className="card shadow-lg border-0 mb-4"
-                             style={{
-                                 background: 'rgba(255, 255, 255, 0.95)',
-                                 backdropFilter: 'blur(10px)'
-                             }}>
-                            <div className="card-body p-4">
-
-                                {/* Record Button */}
-                                <div className="text-center mb-4">
-                                    <button
-                                        className={`btn btn-lg rounded-circle d-flex align-items-center justify-content-center mx-auto ${
-                                            isRecording
-                                                ? 'btn-danger'
-                                                : audioURL
-                                                    ? 'btn-success'
-                                                    : 'btn-primary'
-                                        }`}
-                                        style={{
-                                            width: '120px',
-                                            height: '120px',
-                                            fontSize: '1.1rem',
-                                            fontWeight: '600',
-                                            boxShadow: isRecording
-                                                ? '0 0 30px rgba(220, 53, 69, 0.5)'
-                                                : '0 8px 25px rgba(0, 0, 0, 0.15)',
-                                            animation: isRecording ? 'pulse 1.5s infinite' : 'none'
-                                        }}
-                                        onClick={isRecording ? stopRecording : audioURL ? resetRecording : startRecording}
-                                    >
-                                        <div className="text-center">
-                                            {isRecording ? (
-                                                <>
-                                                    <i className="bi bi-stop-fill d-block mb-1" style={{ fontSize: '2rem' }}></i>
-                                                    <small>Stop</small>
-                                                </>
-                                            ) : audioURL ? (
-                                                <>
-                                                    <i className="bi bi-arrow-clockwise d-block mb-1" style={{ fontSize: '2rem' }}></i>
-                                                    <small>Re-record</small>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <i className="bi bi-mic-fill d-block mb-1" style={{ fontSize: '2rem' }}></i>
-                                                    <small>Record</small>
-                                                </>
-                                            )}
-                                        </div>
-                                    </button>
-
-                                    {/* Timer */}
-                                    {(isRecording || audioURL) && (
-                                        <div className="mt-3">
-                      <span className="badge bg-secondary fs-6 px-3 py-2">
-                        <i className="bi bi-clock me-1"></i>
-                          {formatTime(recordingTime)}
-                      </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Audio Playback */}
-                                {audioURL && (
-                                    <div className="text-center mb-4">
-                                        <button
-                                            className="btn btn-outline-primary btn-lg"
-                                            onClick={playAudio}
-                                        >
-                                            <i className={`bi ${isPlaying ? 'bi-pause-fill' : 'bi-play-fill'} me-2`}></i>
-                                            {isPlaying ? 'Pause' : 'Play'} Recording
-                                        </button>
-                                        <audio
-                                            ref={audioRef}
-                                            src={audioURL}
-                                            onEnded={() => setIsPlaying(false)}
-                                            style={{ display: 'none' }}
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Form Fields */}
-                                <div className="mb-3">
-                                    <label htmlFor="senderName" className="form-label fw-semibold">
-                                        <i className="bi bi-person me-2"></i>Your Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-control form-control-lg"
-                                        id="senderName"
-                                        placeholder="Enter your name"
-                                        value={senderName}
-                                        onChange={(e) => setSenderName(e.target.value)}
-                                        style={{
-                                            border: '2px solid #e9ecef',
-                                            borderRadius: '12px'
-                                        }}
-                                    />
-                                </div>
-
-                                <div className="mb-4">
-                                    <label htmlFor="message" className="form-label fw-semibold">
-                                        <i className="bi bi-chat-heart me-2"></i>Written Message (Optional)
-                                    </label>
-                                    <textarea
-                                        className="form-control"
-                                        id="message"
-                                        rows="3"
-                                        placeholder="Add a written note to go with your recording..."
-                                        value={message}
-                                        onChange={(e) => setMessage(e.target.value)}
-                                        style={{
-                                            border: '2px solid #e9ecef',
-                                            borderRadius: '12px'
-                                        }}
-                                    ></textarea>
-                                </div>
-
-                                {/* Send Button */}
-                                <button
-                                    className="btn btn-primary btn-lg w-100 py-3"
-                                    onClick={sendRecording}
-                                    disabled={!audioURL || !senderName.trim() || isUploading}
-                                    style={{
-                                        borderRadius: '12px',
-                                        fontWeight: '600',
-                                        fontSize: '1.1rem'
-                                    }}
-                                >
-                                    {isUploading ? (
-                                        <>
-                                            <div className="spinner-border spinner-border-sm me-2" role="status">
-                                                <span className="visually-hidden">Loading...</span>
-                                            </div>
-                                            Sending Message...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <i className="bi bi-send me-2"></i>
-                                            Send Your Message
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="text-center text-white-50">
-                            <small>
-                                <i className="bi bi-heart-fill me-1"></i>
-                                Your message will make this day even more special
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        
-        .btn:focus {
-          box-shadow: none !important;
-        }
-        
-        .form-control:focus {
-          border-color: #667eea !important;
-          box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
-        }
-        
-        @media (max-width: 576px) {
-          .display-5 {
-            font-size: 2rem !important;
-          }
-        }
-      `}</style>
-        </div>
+        </>
     );
 };

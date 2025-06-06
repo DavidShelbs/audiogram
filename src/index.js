@@ -4,15 +4,17 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import {BrowserRouter} from "react-router";
-import { WaveformProvider } from './components';
+import { WaveformProvider, AuthProvider } from './components';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
     <BrowserRouter>
         <React.StrictMode>
-            <WaveformProvider>
-                <App />
-            </WaveformProvider>
+            <AuthProvider>
+                <WaveformProvider>
+                    <App />
+                </WaveformProvider>
+            </AuthProvider>
         </React.StrictMode>
     </BrowserRouter>
 );

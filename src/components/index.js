@@ -1,3 +1,5 @@
 // export { PlayButton } from './PlayButton/PlayButton'
 export { Waveform } from './Waveform/Waveform'
 export { WaveformProvider } from './Waveform/WaveformContext'
+export { useAuth, AuthProvider } from './Auth/AuthContext'
+export { NavBar } from './NavBar/NavBar'
