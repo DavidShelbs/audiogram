@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { functions } from '../../Firebase';
 import { useAuth, NavBar } from '../../components';
@@ -11,12 +11,61 @@ export const HomePage = () => {
     const [createdEventUrl, setCreatedEventUrl] = useState('');
     const [createLoading, setCreateLoading] = useState(false);
     const [joinLoading, setJoinLoading] = useState(false);
+    const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
 
+    const qrCodeRef = useRef();
     const { user, loading } = useAuth();
 
     // Firebase setup
     const createEvent = httpsCallable(functions, 'createEvent');
     const getEvent = httpsCallable(functions, 'getEvent');
+
+    // Load QRCode.js library
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+        script.async = true;
+        document.head.appendChild(script);
+
+        return () => {
+            document.head.removeChild(script);
+        };
+    }, []);
+
+    // Generate QR Code when URL is available
+    useEffect(() => {
+        if (createdEventUrl && window.QRCode && qrCodeRef.current) {
+            // Clear previous QR code
+            qrCodeRef.current.innerHTML = '';
+
+            // Create new QR code
+            const qr = new window.QRCode(qrCodeRef.current, {
+                text: createdEventUrl,
+                width: 256,
+                height: 256,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: window.QRCode.CorrectLevel.H
+            });
+
+            // Extract the QR code as data URL for downloading
+            setTimeout(() => {
+                const canvas = qrCodeRef.current.querySelector('canvas');
+                if (canvas) {
+                    setQrCodeDataUrl(canvas.toDataURL('image/png'));
+                }
+            }, 100);
+        }
+    }, [createdEventUrl]);
+
+    // Get the current domain for URL generation
+    const getCurrentDomain = () => {
+        if (typeof window !== 'undefined') {
+            return window.location.origin;
+        }
+        // Fallback - you should replace this with your actual production domain
+        return 'https://your-domain.com';
+    };
 
     const handleJoinEvent = async () => {
         if (!eventId.trim()) {
@@ -62,7 +111,9 @@ export const HomePage = () => {
             });
 
             if (result.data.success) {
-                setCreatedEventUrl(result.data.eventUrl);
+                // Fix URL to use current domain instead of localhost
+                const eventUrl = result.data.eventUrl.replace(/^https?:\/\/localhost:\d+/, getCurrentDomain());
+                setCreatedEventUrl(eventUrl);
                 setNewEventName('');
                 setNewEventDescription('');
                 setShowCreateEvent(false);
@@ -93,6 +144,17 @@ export const HomePage = () => {
                 alert('Unable to copy to clipboard. Please copy the link manually.');
             }
             document.body.removeChild(textArea);
+        }
+    };
+
+    const downloadQRCode = () => {
+        if (qrCodeDataUrl) {
+            const link = document.createElement('a');
+            link.download = `${newEventName || 'event'}-qr-code.png`;
+            link.href = qrCodeDataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     };
 
@@ -387,10 +449,10 @@ export const HomePage = () => {
                     </div>
                 )}
 
-                {/* Created Event Success Modal */}
+                {/* Created Event Success Modal with QR Code */}
                 {createdEventUrl && (
                     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                        <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-dialog modal-dialog-centered modal-lg">
                             <div className="modal-content"
                                  style={{
                                      background: 'rgba(255, 255, 255, 0.98)',
@@ -406,7 +468,10 @@ export const HomePage = () => {
                                     <button
                                         type="button"
                                         className="btn-close"
-                                        onClick={() => setCreatedEventUrl('')}
+                                        onClick={() => {
+                                            setCreatedEventUrl('');
+                                            setQrCodeDataUrl('');
+                                        }}
                                     ></button>
                                 </div>
                                 <div className="modal-body">
@@ -418,34 +483,64 @@ export const HomePage = () => {
                                         <small className="font-monospace text-break">{createdEventUrl}</small>
                                     </div>
 
-                                    <div className="d-grid gap-2">
-                                        <button
-                                            className="btn btn-primary btn-lg"
-                                            onClick={() => copyToClipboard(createdEventUrl)}
-                                            style={{
-                                                borderRadius: '12px',
-                                                fontWeight: '600'
-                                            }}
-                                        >
-                                            <i className="bi bi-clipboard me-2"></i>
-                                            Copy Link
-                                        </button>
-                                        <button
-                                            className="btn btn-outline-primary"
-                                            onClick={() => window.open(createdEventUrl, '_blank')}
-                                            style={{
-                                                borderRadius: '12px'
-                                            }}
-                                        >
-                                            <i className="bi bi-arrow-up-right-square me-2"></i>
-                                            Test Event Page
-                                        </button>
+                                    <div className="row g-3 mb-4">
+                                        <div className="col-md-6">
+                                            <div className="d-grid gap-2">
+                                                <button
+                                                    className="btn btn-primary btn-lg"
+                                                    onClick={() => copyToClipboard(createdEventUrl)}
+                                                    style={{
+                                                        borderRadius: '12px',
+                                                        fontWeight: '600'
+                                                    }}
+                                                >
+                                                    <i className="bi bi-clipboard me-2"></i>
+                                                    Copy Link
+                                                </button>
+                                                <button
+                                                    className="btn btn-outline-primary"
+                                                    onClick={() => window.open(createdEventUrl, '_blank')}
+                                                    style={{
+                                                        borderRadius: '12px'
+                                                    }}
+                                                >
+                                                    <i className="bi bi-arrow-up-right-square me-2"></i>
+                                                    Test Event Page
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="col-md-6">
+                                            <div className="text-center">
+                                                <h6 className="mb-3">
+                                                    <i className="bi bi-qr-code me-2"></i>
+                                                    QR Code
+                                                </h6>
+                                                <div
+                                                    ref={qrCodeRef}
+                                                    className="d-inline-block p-3 bg-white rounded-3 shadow-sm mb-3"
+                                                    style={{ minHeight: '128px', minWidth: '128px' }}
+                                                ></div>
+                                                <div className="d-grid">
+                                                    <button
+                                                        className="btn btn-outline-success"
+                                                        onClick={downloadQRCode}
+                                                        disabled={!qrCodeDataUrl}
+                                                        style={{
+                                                            borderRadius: '12px'
+                                                        }}
+                                                    >
+                                                        <i className="bi bi-download me-2"></i>
+                                                        Download QR Code
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="alert alert-info mt-3" role="alert">
+                                    <div className="alert alert-info" role="alert">
                                         <small>
                                             <i className="bi bi-info-circle me-1"></i>
-                                            <strong>Tip:</strong> You can also create QR codes from this link to make it easy for guests to access on their phones.
+                                            <strong>Tip:</strong> Print the QR code on invitations or place it at your event location so guests can easily scan and leave voice messages!
                                         </small>
                                     </div>
                                 </div>
