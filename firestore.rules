@@ -1,9 +1,112 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2025, 6, 24);
+
+    // Events Collection Rules
+    match /events/{eventId} {
+      // Anyone can read active events (for public event discovery)
+      // You might want to restrict this based on your app's needs
+      allow read: if resource.data.isActive == true;
+
+      // Only authenticated users can create events
+      allow create: if request.auth != null &&
+        // Validate required fields are present
+        request.resource.data.keys().hasAll([
+          'createdAt', 'createdBy', 'createdByEmail', 'eventDescription',
+          'eventId', 'eventName', 'isActive', 'messageCount', 'settings'
+        ]) &&
+        // Ensure the creator is the authenticated user
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.createdByEmail == request.auth.token.email &&
+        // Validate data types
+        request.resource.data.createdAt is string &&
+        request.resource.data.createdBy is string &&
+        request.resource.data.createdByEmail is string &&
+        request.resource.data.eventDescription is string &&
+        request.resource.data.eventId is string &&
+        request.resource.data.eventName is string &&
+        request.resource.data.isActive is bool &&
+        request.resource.data.messageCount is number &&
+        request.resource.data.settings is map &&
+        // Validate settings structure
+        request.resource.data.settings.keys().hasAll(['allowAnonymous', 'maxRecordingDuration', 'requireApproval']) &&
+        request.resource.data.settings.allowAnonymous is bool &&
+        request.resource.data.settings.maxRecordingDuration is number &&
+        request.resource.data.settings.requireApproval is bool &&
+        // Ensure messageCount starts at 0
+        request.resource.data.messageCount == 0;
+
+      // Only event creator can update their events
+      allow update: if request.auth != null &&
+        request.auth.uid == resource.data.createdBy &&
+        // Prevent modification of certain immutable fields
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'eventDescription', 'eventName', 'isActive', 'messageCount', 'settings'
+        ]) &&
+        // Ensure data types are maintained
+        request.resource.data.eventDescription is string &&
+        request.resource.data.eventName is string &&
+        request.resource.data.isActive is bool &&
+        request.resource.data.messageCount is number &&
+        request.resource.data.settings is map;
+
+      // Only event creator can delete their events
+      allow delete: if request.auth != null &&
+        request.auth.uid == resource.data.createdBy;
+    }
+
+    // Audio Messages Collection Rules
+    match /audioMessages/{messageId} {
+      // Only event creators can read audio messages (for privacy)
+      allow read: if request.auth != null &&
+        request.auth.uid == get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.createdBy;
+
+      // Create audio messages
+      allow create: if
+        // Check if event exists and is active
+        exists(/databases/$(database)/documents/events/$(request.resource.data.eventId)) &&
+        get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.isActive == true &&
+        (
+          // If event allows anonymous, anyone can create
+          get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.settings.allowAnonymous == true ||
+          // Or user must be authenticated
+          request.auth != null
+        ) &&
+        // Validate required fields
+        request.resource.data.keys().hasAll([
+          'audioUrl', 'createdAt', 'eventId', 'fileName', 'fileSize',
+          'message', 'mimeType', 'recordingDuration', 'senderName', 'timestamp', 'userAgent'
+        ]) &&
+        // Validate data types
+        request.resource.data.audioUrl is string &&
+        request.resource.data.createdAt is string &&
+        request.resource.data.eventId is string &&
+        request.resource.data.fileName is string &&
+        request.resource.data.fileSize is number &&
+        request.resource.data.message is string &&
+        request.resource.data.mimeType is string &&
+        request.resource.data.recordingDuration is number &&
+        request.resource.data.senderName is string &&
+        request.resource.data.timestamp is timestamp &&
+        request.resource.data.userAgent is string &&
+        // Validate recording duration doesn't exceed event limit
+        request.resource.data.recordingDuration <= get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.settings.maxRecordingDuration &&
+        // Ensure sender name is not empty
+        request.resource.data.senderName.size() > 0;
+
+      // Only event creator can update/delete audio messages
+      // (for moderation purposes)
+      allow update, delete: if request.auth != null &&
+        request.auth.uid == get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.createdBy;
+    }
+
+    // Function to increment message count (you'll need to handle this in your app logic)
+    // This is a helper rule for potential future use with Cloud Functions
+    match /events/{eventId} {
+      allow update: if request.auth != null &&
+        // Allow system updates for message count increments
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messageCount']) &&
+        request.resource.data.messageCount == resource.data.messageCount + 1;
     }
   }
 }

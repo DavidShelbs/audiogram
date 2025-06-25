@@ -14,7 +14,7 @@ export const HomePage = () => {
     const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
 
     const qrCodeRef = useRef();
-    const { user, loading } = useAuth();
+    const { user, loading, signIn, signOut } = useAuth();
 
     // Firebase setup
     const createEvent = httpsCallable(functions, 'createEvent');
@@ -291,7 +291,7 @@ export const HomePage = () => {
 
                                             <button
                                                 className="btn btn-success btn-lg w-100"
-                                                onClick={() => user ? setShowCreateEvent(true) : alert('Please sign in to create an event')}
+                                                onClick={() => user ? setShowCreateEvent(true) : signIn()}
                                                 style={{
                                                     borderRadius: '12px',
                                                     fontWeight: '600'

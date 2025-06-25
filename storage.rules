@@ -1,12 +1,43 @@
 rules_version = '2';
-
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // Audio messages storage rules
+    match /audio-messages/{eventId}/{fileName} {
+
+      // Only event creators can read audio files (for privacy)
+      allow read: if request.auth != null &&
+        firestore.exists(/databases/(default)/documents/events/$(eventId)) // &&
+        // request.auth.uid == firestore.get(/databases/(default)/documents/events/$(eventId)).data.createdBy;
+
+      // Create audio files - simplified approach
+      allow create: if
+        // Basic file validation
+        resource == null && // Ensure file doesn't already exist
+        request.resource.size <= 50 * 1024 * 1024 && // Max 50MB file size
+        request.resource.contentType.matches('audio/.*') && // Must be audio file
+        // Event must exist
+        firestore.exists(/databases/(default)/documents/events/$(eventId)) &&
+        // Either anonymous is allowed OR user is authenticated
+        (
+          firestore.get(/databases/(default)/documents/events/$(eventId)).data.settings.allowAnonymous == true ||
+          request.auth != null
+        ) &&
+        // Event must be active
+        firestore.get(/databases/(default)/documents/events/$(eventId)).data.isActive == true;
+
+      // Only event creators can delete audio files (for moderation)
+      allow delete: if request.auth != null &&
+        firestore.exists(/databases/(default)/documents/events/$(eventId)) &&
+        request.auth.uid == firestore.get(/databases/(default)/documents/events/$(eventId)).data.createdBy;
+
+      // No updates allowed - audio files are immutable
+      allow update: if false;
+    }
+
+    // Deny access to any other paths
     match /{allPaths=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
